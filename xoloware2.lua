@@ -44,7 +44,8 @@ local character = {
         enabled = false,
         keybind = nil
     },
-    nojumpcooldown = false
+    nojumpcooldown = false,
+    tpcommand = false
 }
 
 local camlock = {
@@ -69,9 +70,14 @@ local camlock = {
 
 }
 
-local utility = {
-    lasttick = nil
+
+local loopkill = {
+    enabled = false,
+    target = nil,
+    highlight = false
 }
+
+
 local skyboxes = {
     ["Normal"] = {600886090,600830446,600831635,600832720,600833862,600835177},
     ["DoomSpire"] = {6050649245,6050664592,6050648475,6050644331,6050649718,6050650083},
@@ -256,12 +262,42 @@ local function OnKeyPress(input)
 end
 
 -- Connect the key press event to the function
+
 game:GetService("UserInputService").InputBegan:Connect(OnKeyPress)
 
 RunService.Stepped:Connect(function()
 	Players.LocalPlayer.Character.Humanoid.UseJumpPower = not character.nojumpcooldown
 end)
 
+function FindPlayer(TargetDisplay)
+    for i,v in pairs(game.Players:GetChildren()) do
+        if (string.sub(string.lower(v.DisplayName),1,string.len(TargetDisplay))) == string.lower(TargetDisplay) then
+            return v
+        end
+    end
+end
+
+
+
+game.ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", math.huge):WaitForChild("OnMessageDoneFiltering", math.huge).OnClientEvent:Connect(function(data)
+    if not character.tpcommand then return end
+	if data ~= nil then
+		local player = tostring(data.FromSpeaker)
+		local message = tostring(data.Message)
+        if player == Players.LocalPlayer.Name then
+            local text = message:split(' ')
+            if text[1] == string.lower(".tp") then 
+                if text[2] == nil then 
+                    return
+                end
+                local targetp = FindPlayer(text[2])
+                if targetp.Character then 
+                    Players.LocalPlayer.Character.HumanoidRootPart.CFrame = targetp.Character.HumanoidRootPart.CFrame
+                end
+            end
+        end
+    end
+end)
 -- Lock
 
 
@@ -418,6 +454,84 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- Looplkill
+
+local LoopHighlight = Instance.new("Highlight", CoreGui)
+
+
+
+
+RunService.RenderStepped:Connect(function()
+	if loopkill.enabled and loopkill.target and loopkill.target.Character and loopkill.highlight then
+		LoopHighlight.Parent = loopkill.target.Character
+	else
+		LoopHighlight.Parent = CoreGui
+	end
+end)
+
+
+
+
+local isPaused = false    
+
+-- Knock method
+-- Easily countered by heavy attack
+RunService.RenderStepped:Connect(function()
+    if not loopkill.enabled or not loopkill.target or not loopkill.target.Character or not loopkill.target.Name then
+        return
+    end
+
+
+
+    if isPaused and Players.LocalPlayer.Character then
+        game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool"):Deactivate()
+        -- Execute the section of code that should run when paused
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(game.Players[loopkill.target.Name].Character.UpperTorso.Position + Vector3.new(0,2,0))
+        wait()
+        game.ReplicatedStorage.MainEvent:FireServer("Stomp")
+        wait()
+        if loopkill.target and loopkill.target.Character then
+            local bodyEffects = loopkill.target.Character:FindFirstChild("BodyEffects")
+            if bodyEffects and (bodyEffects:FindFirstChild("K.O").Value == false and game.Players:FindFirstChild(loopkill.target.Name)) then
+                isPaused = false
+            end
+        end
+    else
+        -- Execute the section of code that should be paused
+        local radius = 25 
+        local theta = math.random() * math.pi * 2
+        local phi = math.acos(2 * math.random() - 1) 
+        local x = radius * math.sin(phi) * math.cos(theta)
+        local y = radius * math.sin(phi) * math.sin(theta)
+        local z = radius * math.cos(phi)
+
+        local localPlayer = game.Players.LocalPlayer
+        local localCharacter = localPlayer.Character
+        tool = localCharacter and localCharacter:FindFirstChildWhichIsA("Tool") -- Assign the tool variable
+
+        if localCharacter and tool then
+            local humanoidRootPart = localCharacter:FindFirstChild("HumanoidRootPart")
+
+            if tool and humanoidRootPart then
+                humanoidRootPart.CFrame = loopkill.target.Character.HumanoidRootPart.CFrame * CFrame.new(x, y, z)
+                
+                game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool"):Activate()
+                wait(1.6)
+                local targetPosition = loopkill.target.Character["HumanoidRootPart"].Position + (loopkill.target.Character["HumanoidRootPart"].Velocity * 0.11)
+                humanoidRootPart.CFrame = CFrame.new(targetPosition)
+            end
+        end
+
+        if loopkill.target and loopkill.target.Character then
+            local bodyEffects = loopkill.target.Character:FindFirstChild("BodyEffects")
+            if bodyEffects and (bodyEffects:FindFirstChild("K.O").Value == true or not game.Players:FindFirstChild(loopkill.target.Name)) then
+                
+               
+                isPaused = true
+            end
+        end
+    end
+end)
 -- UI
 
 
@@ -877,6 +991,60 @@ Aimlock:AddToggle({
     end
 })
 
+Aimlock:AddSeparator({
+    enabled = true,
+    text = "Loopkill"
+})
+
+
+Aimlock:AddToggle({
+    text = "Loopkill",
+    state = false,
+    risky = true,
+    tooltip = "Enabled or no",
+    flag = "Toggle_2",
+    risky = false,
+    callback = function(v)
+        print(v)
+
+    end
+}):AddBind({
+    enabled = true,
+    text = "Keybind2",
+    tooltip = "tooltip2",
+    mode = "toggle",
+    bind = "None",
+    flag = "ToggleKey_2",
+    state = false,
+    nomouse = false,
+    risky = false,
+    noindicator = false,
+    callback = function(v)
+        loopkill.enabled = v
+        if loopkill.enabled then
+            loopkill.target = GetClosestPlayer()
+        else 
+            loopkill.target = nil
+        end
+    end,
+    keycallback = function(v)
+        print(ValueText, v)
+    end
+})
+
+Aimlock:AddToggle({
+    text = "Highlight",
+    state = false,
+    risky = true,
+    tooltip = "Enabled or no",
+    flag = "Toggle_2",
+    risky = false,
+    callback = function(v)
+        loopkill.highlight = v
+
+    end
+})
+
 
 
 
@@ -1000,6 +1168,23 @@ Speed:AddToggle({
     risky = false,
     callback = function(v)
         character.nojumpcooldown = v
+    end
+})
+
+Speed:AddSeparator({
+    enabled = true,
+    text = "Commands"
+})
+
+Speed:AddToggle({
+    text = "TP Command (Prefix: .)",
+    state = false,
+    risky = true,
+    tooltip = "Enabled or no",
+    flag = "Toggle_2",
+    risky = false,
+    callback = function(v)
+        character.tpcommand = v
     end
 })
 
