@@ -74,7 +74,8 @@ local camlock = {
 local loopkill = {
     enabled = false,
     target = nil,
-    highlight = false
+    highlight = false,
+    method = "Light attack"
 }
 
 
@@ -474,10 +475,109 @@ end)
 
 local isPaused = false    
 
--- Knock method
--- Easily countered by heavy attack
+
+function BuyKnife()
+    for i,v in pairs(game:GetService("Workspace").Ignored.Shop:GetChildren()) do
+        if v.Name == "[Knife] - $159" then
+            local Pos = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+            local Teleport = v:FindFirstChild("Head")
+            if Teleport then
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Teleport.CFrame
+                local CD = v:FindFirstChild("ClickDetector")
+                if CD then
+                    wait(0.75)
+                    fireclickdetector(CD)
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Pos
+                end
+            end
+        end
+        
+    end
+end
+    
+-- Deactivate tool
 RunService.RenderStepped:Connect(function()
-    if not loopkill.enabled or not loopkill.target or not loopkill.target.Character or not loopkill.target.Name then
+    if not loopkill.target then
+        game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool"):Deactivate()
+    end
+end)
+
+-- Knife method (Beta)
+RunService.RenderStepped:Connect(function()
+    if not loopkill.enabled or not loopkill.target or not loopkill.target.Character or not loopkill.target.Name or loopkill.method ~= "Knife spam (BETA)" then
+        return
+    end
+
+    
+    
+    if Players.LocalPlayer.Backpack:FindFirstChild("[Knife]") then
+        Players.LocalPlayer.Character.Humanoid:EquipTool(Players.LocalPlayer.Backpack:FindFirstChild("[Knife]"))
+    else
+        BuyKnife()
+    end
+
+
+    if isPaused and Players.LocalPlayer.Character then
+        Players.LocalPlayer.Character.Humanoid:UnequipTools()
+        -- Execute the section of code that should run when paused
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(game.Players[loopkill.target.Name].Character.UpperTorso.Position + Vector3.new(0,2,0))
+        wait()
+        game.ReplicatedStorage.MainEvent:FireServer("Stomp")
+        wait()
+        if loopkill.target and loopkill.target.Character then
+            local bodyEffects = loopkill.target.Character:FindFirstChild("BodyEffects")
+            if bodyEffects and (bodyEffects:FindFirstChild("K.O").Value == false and game.Players:FindFirstChild(loopkill.target.Name)) then
+                isPaused = false
+            end
+        end
+    else
+        -- Execute the section of code that should be paused
+        local radius = 25 
+        local theta = math.random() * math.pi * 2
+        local phi = math.acos(2 * math.random() - 1) 
+        local x = radius * math.sin(phi) * math.cos(theta)
+        local y = radius * math.sin(phi) * math.sin(theta)
+        local z = radius * math.cos(phi)
+
+        local localPlayer = game.Players.LocalPlayer
+        local localCharacter = localPlayer.Character
+        tool = localCharacter and localCharacter:FindFirstChildWhichIsA("Tool") -- Assign the tool variable
+
+        if localCharacter and tool then
+            local humanoidRootPart = localCharacter:FindFirstChild("HumanoidRootPart")
+
+            if tool and humanoidRootPart then
+                humanoidRootPart.CFrame = loopkill.target.Character.HumanoidRootPart.CFrame * CFrame.new(x, y, z)
+                
+                game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool"):Activate()
+                wait(1)
+                
+                humanoidRootPart.CFrame = loopkill.target.Character.HumanoidRootPart.CFrame
+            end
+        end
+
+        if loopkill.target and loopkill.target.Character then
+            local bodyEffects = loopkill.target.Character:FindFirstChild("BodyEffects")
+            if bodyEffects and (bodyEffects:FindFirstChild("K.O").Value == true or not game.Players:FindFirstChild(loopkill.target.Name)) then
+                
+               
+                isPaused = true
+            end
+        end
+    end
+end)
+
+function LightPunch()
+    game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool"):Activate()
+    wait(0.1)
+    game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool"):Deactivate()
+
+end
+
+-- Heavy attack method
+-- IDK HOW TO LIGHT ATTACK! BUT LIGHT ATTACK IS OP WITH THIS
+RunService.RenderStepped:Connect(function()
+    if not loopkill.enabled or not loopkill.target or not loopkill.target.Character or not loopkill.target.Name or loopkill.method ~= "Light attack" then
         return
     end
 
@@ -515,7 +615,7 @@ RunService.RenderStepped:Connect(function()
             if tool and humanoidRootPart then
                 humanoidRootPart.CFrame = loopkill.target.Character.HumanoidRootPart.CFrame * CFrame.new(x, y, z)
                 
-                game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool"):Activate()
+                LightPunch() -- Disable mouse icon
                 wait(1.6)
                 local targetPosition = loopkill.target.Character["HumanoidRootPart"].Position + (loopkill.target.Character["HumanoidRootPart"].Velocity * 0.11)
                 humanoidRootPart.CFrame = CFrame.new(targetPosition)
@@ -532,6 +632,67 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
+RunService.RenderStepped:Connect(function()
+    if not loopkill.enabled or not loopkill.target or not loopkill.target.Character or not loopkill.target.Name or loopkill.method ~= "Heavy attack" then
+        return
+    end
+
+
+
+    if isPaused and Players.LocalPlayer.Character then
+        game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool"):Deactivate()
+        -- Execute the section of code that should run when paused
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(game.Players[loopkill.target.Name].Character.UpperTorso.Position + Vector3.new(0,2,0))
+        wait()
+        game.ReplicatedStorage.MainEvent:FireServer("Stomp")
+        wait()
+        if loopkill.target and loopkill.target.Character then
+            local bodyEffects = loopkill.target.Character:FindFirstChild("BodyEffects")
+            if bodyEffects and (bodyEffects:FindFirstChild("K.O").Value == false and game.Players:FindFirstChild(loopkill.target.Name)) then
+                isPaused = false
+            end
+        end
+    else
+        -- Execute the section of code that should be paused
+        local radius = 25 
+        local theta = math.random() * math.pi * 2
+        local phi = math.acos(2 * math.random() - 1) 
+        local x = radius * math.sin(phi) * math.cos(theta)
+        local y = radius * math.sin(phi) * math.sin(theta)
+        local z = radius * math.cos(phi)
+
+        local localPlayer = game.Players.LocalPlayer
+        local localCharacter = localPlayer.Character
+        tool = localCharacter and localCharacter:FindFirstChildWhichIsA("Tool") -- Assign the tool variable
+
+        if localCharacter and tool then
+            local humanoidRootPart = localCharacter:FindFirstChild("HumanoidRootPart")
+
+            if tool and humanoidRootPart then
+                humanoidRootPart.CFrame = loopkill.target.Character.HumanoidRootPart.CFrame * CFrame.new(x, y, z)
+                
+                game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool"):Activate() -- Disable mouse icon
+                wait(1.6)
+                local targetPosition = loopkill.target.Character["HumanoidRootPart"].Position + (loopkill.target.Character["HumanoidRootPart"].Velocity * 0.11)
+                humanoidRootPart.CFrame = CFrame.new(targetPosition)
+            end
+        end
+
+        if loopkill.target and loopkill.target.Character then
+            local bodyEffects = loopkill.target.Character:FindFirstChild("BodyEffects")
+            if bodyEffects and (bodyEffects:FindFirstChild("K.O").Value == true or not game.Players:FindFirstChild(loopkill.target.Name)) then
+                
+               
+                isPaused = true
+            end
+        end
+    end
+end)
+-- test
+
+
+
 -- UI
 
 
@@ -1047,7 +1208,22 @@ Aimlock:AddToggle({
 
 
 
+Aimlock:AddList({
+    enabled = true,
+    text = "Loopkill method (Default : Light attack)",
+    tooltip = "Nigganiggernigganigger",
+    selected = "",
+    multi = false,
+    open = false,
+    max = 4,
+    values = {"Heavy attack", "Knife spam (BETA)", "Light attack"},
+    risky = false,
+    callback = function(v)
+        
+        loopkill.method = v
+    end
 
+})
 
 
 
@@ -1112,6 +1288,37 @@ Others:AddToggle({
         character.tpmouse.keybind = v
     end
 })
+
+
+Others:AddToggle({
+    text = "LightPUnch test",
+    state = false,
+    risky = true,
+    tooltip = "Enabled or no",
+    flag = "Toggle_2",
+    risky = false,
+    callback = function(v)
+        print(v)
+    end
+}):AddBind({
+    enabled = true,
+    text = "Keybind2",
+    tooltip = "tooltip2",
+    mode = "toggle",
+    bind = "None",
+    flag = "ToggleKey_2",
+    state = false,
+    nomouse = false,
+    risky = false,
+    noindicator = false,
+    callback = function(v)
+        print(v)
+    end,
+    keycallback = function(v)
+        print(v)
+    end
+})
+
 
 Speed:AddToggle({
     text = "Speed",
